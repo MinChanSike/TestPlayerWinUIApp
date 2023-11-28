@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="TestPlayerWinUIApp.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:fl="using:FlyleafLib.Controls.WinUI"
+    xmlns:local="using:TestPlayerWinUIApp"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="rootGrid">
+        <Grid.Resources>
+            <fl:TicksToTimeConverter x:Key="TicksToTime" />
+            <fl:TicksToSecondsConverter x:Key="TicksToSeconds" />
+        </Grid.Resources>
+
+        <fl:FullScreenContainer x:Name="FSC">
+            <fl:FlyleafHost x:Name="flyleafHost" Player="{Binding Player}">
+                <Grid
+                    x:Name="playerControlGrid"
+                    Margin="0,0,0,0"
+                    VerticalAlignment="Bottom"
+                    Background="#A3000000">
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="8,0,8,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="auto" />
+                            <ColumnDefinition Width="auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!--  Current Time | Stream Url | Play Button | FullScreen Toggle  -->
+                        <TextBlock
+                            Grid.Column="0"
+                            Margin="0,5,5,5"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Text="{Binding Player.CurTime, Converter={StaticResource TicksToTime}}" />
+
+                        <TextBox
+                            x:Name="txtUrl"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Width="auto"
+                            Margin="0,5,5,5"
+                            Padding="6"
+                            VerticalAlignment="Center"
+                            Text="rtsp://10.1.2.195:8554/live/sample1" />
+
+                        <Button
+                            x:Name="btnPlayStop"
+                            Grid.Row="0"
+                            Grid.Column="2"
+                            Width="80"
+                            Margin="0,5,5,5"
+                            Padding="6.2"
+                            Click="OnBtnPlayStopClicked"
+                            Content="Play" />
+
+                        <Button
+                            x:Name="btnFullScreen"
+                            Grid.Row="0"
+                            Grid.Column="3"
+                            Margin="0,5,0,5"
+                            Padding="6.2"
+                            Command="{Binding Player.Commands.ToggleFullScreen}"
+                            IsTabStop="False" />
+
+                    </Grid>
+                </Grid>
+
+            </fl:FlyleafHost>
+        </fl:FullScreenContainer>
+
+    </Grid>
+</Window>
