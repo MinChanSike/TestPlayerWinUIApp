@@ -50,7 +50,7 @@
                             Margin="0,5,5,5"
                             Padding="6"
                             VerticalAlignment="Center"
-                            Text="rtsp://10.1.2.195:8554/live/sample1" />
+                            Text="rtsp://127.0.0.1:8554/live/sample1" />
 
                         <Button
                             x:Name="btnPlayStop"

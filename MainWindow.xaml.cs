@@ -6,12 +6,15 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using SharpGen.Runtime;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
+using Vortice.WinUI;
 using WinRT.Interop;
 
 namespace TestPlayerWinUIApp {
@@ -21,7 +24,6 @@ namespace TestPlayerWinUIApp {
     public sealed partial class MainWindow : Window {
         SymbolIcon iconNormal = new SymbolIcon(Symbol.BackToWindow);
         SymbolIcon iconFullScreen = new SymbolIcon(Symbol.FullScreen);
-         
         LogHandler Log = new LogHandler("[Main] ");
         AppWindow MainAppWindow;
 
@@ -32,7 +34,7 @@ namespace TestPlayerWinUIApp {
             Title = "TestPlayerWinUIApp";
 
             //===== Initializes Engine ====== (Specifies FFmpeg libraries path which is required)
-            Engine.Start(new EngineConfig() {                 
+            Engine.Start(new EngineConfig() {
                 FFmpegPath = ":FFmpeg",
                 FFmpegDevices = false,
                 UIRefresh = false, // For Activity Mode usage
@@ -47,9 +49,12 @@ namespace TestPlayerWinUIApp {
 
             Config = new Config();
             Config.Video.BackgroundColor = System.Windows.Media.Colors.DarkGray;
-            Config.Video.AspectRatio = AspectRatio.Keep;             
+            Config.Video.AspectRatio = AspectRatio.Keep;
             Config.Player.Stats = true;
-           
+            Config.Demuxer.AllowFindStreamInfo = false; //To reduce video initial play time.
+            Config.Demuxer.ReadLiveTimeout = 50000000L; //5 Seconds
+            Config.Demuxer.AllowTimeouts = true;
+
             //===== Low Latency Tuning ======
             Config.Player.MaxLatency = 150 * 10000;
 
@@ -60,7 +65,7 @@ namespace TestPlayerWinUIApp {
 
             Config.Demuxer.FormatOpt["flags"] = "low_delay";
             Config.Demuxer.FormatOpt["rtsp_transport"] = "tcp";
-            //=====================================================================
+            ////=====================================================================
 
 
             Player = new Player(Config);
@@ -92,36 +97,55 @@ namespace TestPlayerWinUIApp {
 
             Player.BufferingStarted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.BufferingStarted");
             Player.BufferingCompleted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.BufferingCompleted");
-            Player.PlaybackStopped += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.PlaybackStopped");
             Player.OpenCompleted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.OpenCompleted");
             Player.OpenSessionCompleted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.OpenSessionCompleted");
-            Player.OpenVideoStreamCompleted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.OpenVideoStreamCompleted");
-            Player.OpenExternalVideoStreamCompleted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.OpenExternalVideoStreamCompleted");
-
             Player.VideoDemuxer.TimedOut += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.VideoDemuxer.TimedOut");
+            Player.PlaybackStopped += (s, e) => {
+                Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.PlaybackStopped, Error => {e.Error}");
+            };
         }
 
-        private void OnBtnPlayStopClicked(object sender, RoutedEventArgs e) {
+        private async void OnBtnPlayStopClicked(object sender, RoutedEventArgs e) {
             Button button = (Button)sender;
-            try {
-                button.IsEnabled = false;
-                if (Player.IsPlaying) {
-                    Debug.WriteLine($"{DateTime.Now.Dump()}\t Stop player.");
-                    Player.Stop();
-                    return;
-                }
 
-                Debug.WriteLine($"{DateTime.Now.Dump()}\t Open player.");
-                var result = Player.Open(txtUrl.Text.Trim());
-                Debug.WriteLine($"{DateTime.Now.Dump()}\t Open player result => {JsonSerializer.Serialize(result)}");
-                if (!result.Success) {
-                    System.Windows.Forms.MessageBox.Show("Could not play input stream url.", "ERROR!");
-                }
-            } catch (Exception ex) {
-                System.Windows.Forms.MessageBox.Show(ex.Message, "ERROR!");
-            } finally {
-                button.IsEnabled = true;
+            if (Player.IsPlaying) {
+                Debug.WriteLine($"{DateTime.Now.Dump()}\t Stop player.");
+                Player.Stop();
+                return;
             }
+
+            var _streamUrl = txtUrl.Text.Trim();
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5))) {
+                try {
+                    cts.Token.Register(() => {                         
+                        DispatcherQueue.TryEnqueue(() => {
+                            System.Windows.Forms.MessageBox.Show($"Could not play input stream url.", "TIMEOUT!");
+                        });
+                    });
+
+                    await Task.Run(() => {
+                        try {
+                            Debug.WriteLine($"{DateTime.Now.Dump()}\t Open player.");
+                            var result = Player.Open(_streamUrl);
+                            Debug.WriteLine($"{DateTime.Now.Dump()}\t Open player result => success:{result.Success}, error:{result.Error}");
+
+                            if (!result.Success && result.Error != "Cancelled") {
+                                DispatcherQueue.TryEnqueue(() => {
+                                    System.Windows.Forms.MessageBox.Show($"Could not play input stream url.\n{result.Error}", "ERROR!");
+                                });
+                            }
+                        } catch (Exception ex) {
+                            DispatcherQueue.TryEnqueue(() => {
+                               System.Windows.Forms.MessageBox.Show(ex.Message, "ERROR!");                                
+                            });
+                        }
+                    }, cts.Token);
+                } catch (OperationCanceledException) {
+                } catch (Exception ex) {
+                    Debug.WriteLine($"{DateTime.Now.Dump()}\t ERROR => {ex.Message}");
+                }
+            }
+
         }
 
         private void FullScreenContainer_CustomizeFullScreenWindow(object sender, EventArgs e) {
@@ -133,12 +157,12 @@ namespace TestPlayerWinUIApp {
         private void Player_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
             switch (e.PropertyName) {
                 case nameof(Player.Status): {
-                    playerControlGrid.AllowFocusOnInteraction = Player.Status != Status.Playing;                     
                     btnPlayStop.Content = Player.Status == Status.Playing ? "Stop" : "Play";
                     break;
                 }
             }
         }
+
 
         #region DragMove (Should be added within FlyleafHost?)
         [DllImport("User32.dll", CharSet = CharSet.Auto, SetLastError = true)]
