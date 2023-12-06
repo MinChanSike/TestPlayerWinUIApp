@@ -6,15 +6,11 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using SharpGen.Runtime;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
-using Vortice.WinUI;
 using WinRT.Interop;
 
 namespace TestPlayerWinUIApp {
@@ -31,8 +27,6 @@ namespace TestPlayerWinUIApp {
         public Config Config { get; set; }
 
         public MainWindow() {
-            Title = "TestPlayerWinUIApp";
-
             //===== Initializes Engine ====== (Specifies FFmpeg libraries path which is required)
             Engine.Start(new EngineConfig() {
                 FFmpegPath = ":FFmpeg",
@@ -67,10 +61,10 @@ namespace TestPlayerWinUIApp {
             Config.Demuxer.FormatOpt["rtsp_transport"] = "tcp";
             ////=====================================================================
 
-
             Player = new Player(Config);
             FullScreenContainer.CustomizeFullScreenWindow += FullScreenContainer_CustomizeFullScreenWindow;
 
+            Title = "TestPlayerWinUIApp";
             InitializeComponent();
             rootGrid.DataContext = this;
 
@@ -113,7 +107,7 @@ namespace TestPlayerWinUIApp {
 
             if (Player.IsPlaying) {
                 Debug.WriteLine($"{DateTime.Now.Dump()}\t Stop player.");
-                Player.renderer.ResizeBuffers((int)flyleafHost.ActualWidth - 1, (int)flyleafHost.ActualHeight - 1);
+                Player.renderer.ResizeBuffers((int)(flyleafHost.ActualWidth - 0.1), (int)(flyleafHost.ActualHeight - 0.1));
                 Player.Stop();
                 Player.renderer.ResizeBuffers((int)flyleafHost.ActualWidth, (int)flyleafHost.ActualHeight);
                 return;
