@@ -10,7 +10,7 @@
   <Identity
     Name="c6083da5-0a68-437e-b210-6acc002699db"
     Publisher="CN=ThuKha"
-    Version="1.0.0.0" />
+    Version="1.0.1.0" />
 
   <mp:PhoneIdentity PhoneProductId="c6083da5-0a68-437e-b210-6acc002699db" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
