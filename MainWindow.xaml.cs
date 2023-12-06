@@ -96,7 +96,10 @@ namespace TestPlayerWinUIApp {
             };
 
             Player.BufferingStarted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.BufferingStarted");
-            Player.BufferingCompleted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.BufferingCompleted");
+            Player.BufferingCompleted += (s, e) => {
+                Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.BufferingCompleted");
+
+            };
             Player.OpenCompleted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.OpenCompleted");
             Player.OpenSessionCompleted += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.OpenSessionCompleted");
             Player.VideoDemuxer.TimedOut += (s, e) => Debug.WriteLine($"{DateTime.Now.Dump()}\t Player.VideoDemuxer.TimedOut");
@@ -110,14 +113,16 @@ namespace TestPlayerWinUIApp {
 
             if (Player.IsPlaying) {
                 Debug.WriteLine($"{DateTime.Now.Dump()}\t Stop player.");
+                Player.renderer.ResizeBuffers((int)flyleafHost.ActualWidth - 1, (int)flyleafHost.ActualHeight - 1);
                 Player.Stop();
+                Player.renderer.ResizeBuffers((int)flyleafHost.ActualWidth, (int)flyleafHost.ActualHeight);
                 return;
             }
 
             var _streamUrl = txtUrl.Text.Trim();
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5))) {
                 try {
-                    cts.Token.Register(() => {                         
+                    cts.Token.Register(() => {
                         DispatcherQueue.TryEnqueue(() => {
                             System.Windows.Forms.MessageBox.Show($"Could not play input stream url.", "TIMEOUT!");
                         });
@@ -136,7 +141,7 @@ namespace TestPlayerWinUIApp {
                             }
                         } catch (Exception ex) {
                             DispatcherQueue.TryEnqueue(() => {
-                               System.Windows.Forms.MessageBox.Show(ex.Message, "ERROR!");                                
+                                System.Windows.Forms.MessageBox.Show(ex.Message, "ERROR!");
                             });
                         }
                     }, cts.Token);
