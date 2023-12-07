@@ -106,10 +106,8 @@ namespace TestPlayerWinUIApp {
             Button button = (Button)sender;
 
             if (Player.IsPlaying) {
-                Debug.WriteLine($"{DateTime.Now.Dump()}\t Stop player.");
-                Player.renderer.ResizeBuffers((int)(flyleafHost.ActualWidth - 0.1), (int)(flyleafHost.ActualHeight - 0.1));
-                Player.Stop();
-                Player.renderer.ResizeBuffers((int)flyleafHost.ActualWidth, (int)flyleafHost.ActualHeight);
+                Debug.WriteLine($"{DateTime.Now.Dump()}\t Stop player.");                 
+                Player.Stop();                 
                 return;
             }
 
